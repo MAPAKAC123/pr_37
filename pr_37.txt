@@ -1,50 +1,44 @@
-import tkinter as tk
-from tkinter.colorchooser import askcolor
+from kivy.app import App
+from kivy.uix.widget import Widget
+from kivy.uix.button import Button
+from kivy.uix.colorpicker import ColorPicker
+from kivy.graphics import Line, Color
 
-class DrawingApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Drawing App")
+class DrawingWidget(Widget):
+    def __init__(self, **kwargs):
+        super(DrawingWidget, self).__init__(**kwargs)
+        self.color_picker = ColorPicker()
+        self.color_picker.bind(color=self.set_color)
+        self.color = (1, 0, 0, 1)  # Default color is red
+        self.line_width = 2
 
-        self.canvas = tk.Canvas(self.root, width=800, height=600, bg="white")
-        self.canvas.pack()
+    def on_touch_down(self, touch):
+        with self.canvas:
+            Color(*self.color)
+            touch.ud['line'] = Line(points=(touch.x, touch.y), width=self.line_width)
 
-        self.color_btn = tk.Button(self.root, text="Выбрать цвет", command=self.choose_color)
-        self.color_btn.pack()
+    def on_touch_move(self, touch):
+        touch.ud['line'].points += [touch.x, touch.y]
 
-        self.clear_btn = tk.Button(self.root, text="Очистить холст", command=self.clear_canvas)
-        self.clear_btn.pack()
-
-        self.thickness_scale = tk.Scale(self.root, from_=1, to=10, orient=tk.HORIZONTAL, label="Толщина линии")
-        self.thickness_scale.pack()
-
-        self.start_x = None
-        self.start_y = None
-
-        self.canvas.bind("<Button-1>", self.start_draw)
-        self.canvas.bind("<B1-Motion>", self.draw)
-
-    def start_draw(self, event):
-        self.start_x = event.x
-        self.start_y = event.y
-
-    def draw(self, event):
-        if self.start_x and self.start_y:
-            thickness = self.thickness_scale.get()
-            color = self.color_btn["bg"]
-            self.canvas.create_line(self.start_x, self.start_y, event.x, event.y, width=thickness, fill=color)
-            self.start_x = event.x
-            self.start_y = event.y
-
-    def choose_color(self):
-        color = askcolor()[1]
-        if color:
-            self.color_btn.config(bg=color)
+    def set_color(self, instance, color):
+        self.color = color
 
     def clear_canvas(self):
-        self.canvas.delete("all")
+        self.canvas.clear()
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = DrawingApp(root)
-    root.mainloop()
+class DrawingApp(App):
+    def build(self):
+        root = Widget()
+        drawing_widget = DrawingWidget()
+        clear_button = Button(text='Clear')
+        clear_button.bind(on_press=drawing_widget.clear_canvas)
+        color_picker = drawing_widget.color_picker
+
+        root.add_widget(drawing_widget)
+        root.add_widget(clear_button)
+        root.add_widget(color_picker)
+
+        return root
+
+if __name__ == '__main__':
+    DrawingApp().run()
